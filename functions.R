@@ -82,3 +82,71 @@ maps_comp_hist <- function(raster_select) {
   p
   
 }
+
+# Function to select the subds for tree type and oxidation, reduction or total N
+forest_subds <- function(ndep_type, tree) {
+  
+  if (ndep_type == "totaln") {
+    subds_select <- paste0(
+      c("WDEP_OXN","WDEP_RDN",paste0("DDEP_OXN_m2",tree),
+        paste0("DDEP_RDN_m2",tree)))
+  }
+  else if (ndep_type == "oxn") {
+    subds_select <- paste0(
+      c("WDEP_OXN",paste0("DDEP_OXN_m2", tree)))
+  }
+  else if (ndep_type == "rdn") {
+    subds_select <- paste0(
+      c("WDEP_RDN",paste0("DDEP_RDN_m2", tree)))
+  }
+  else if (ndep_type == "sox") {
+    subds_select <- paste0(
+      c("WDEP_SOX",paste0("DDEP_SOX_m2", tree)))
+  }
+}
+
+# Calculates the area fraction of coniferous vs deciduous and applies to 
+# N dep
+forest_fraction_scen <- function(nc_fl, ndep_type){
+  
+  # File path
+  scen_fp <- paste0(
+    fd, nc_fl)
+  
+  # Load 
+  r_emep_cnf <- rast(
+    scen_fp,
+    subds = forest_subds(ndep_type, "Conif")) %>%
+    app(., fun=unitchange)
+  r_emep_dec <- rast(
+    scen_fp,
+    subds = forest_subds(ndep_type, "Decid")) %>%
+    app(., fun=unitchange)
+  r_lnd_fract <- rast(
+    scen_fp,
+    subds = c("Area_Conif_Frac","Area_Decid_Frac"))
+  
+  # Calculate area fraction
+  # decid/total weight
+  r_wght <- r_lnd_fract[[2]]/(r_lnd_fract[[1]] + r_lnd_fract[[2]])
+  r_wght[is.na(r_wght)] <- 0.5
+  r_wght_df <- r_wght %>% as.data.frame()
+  
+  # Apply weighting
+  r_emep_dec_adj <- r_emep_dec * r_wght
+  r_emep_cnf_adj <- r_emep_cnf * (1 - r_wght)
+  
+  r_emep_dec_adj_df <- r_emep_dec_adj %>% as.data.frame()
+  r_emep_cnf_adj_df <- r_emep_cnf_adj %>% as.data.frame()
+  
+  # Apply to each ndep_varnm
+  r_emep_21 <- lapply(X = 1:nlyr(r_emep_dec_adj), FUN = function(i){
+    r_emep_dec_adj[[i]] + r_emep_cnf_adj[[i]]
+  }) %>% do.call(c,.)
+  
+  # Sum the ndep types for 1 sum
+  r_emep_21 <- app(r_emep_21, sum)
+  r_emep_21_df <- r_emep_21 %>% as.data.frame()
+  
+  r_emep_21
+}
