@@ -4,9 +4,11 @@
 pacman::p_load(
   "terra","dplyr","stringr","tidyterra","magrittr","ggplot2","ncdf4","knitr",
   "data.table","SpatialUKCEH","RColorBrewer","DT","sf",
-  "AgricInvUKCEH","writexl","readr","janitor")
+  "AgricInvUKCEH","writexl","readr","janitor","readxl")
 
 wd <- "C:/Users/hanlit/OneDrive - UKCEH/Documents/R/GitHub/vegetation"
+
+# NBN atlas data ----
 moss <- read_csv("data/records-2025-04-22.csv")
 
 moss1 <- moss %>%
@@ -15,6 +17,14 @@ moss1 <- moss %>%
   select(scientific_name, occurrence_status, start_date, start_date_year,
          latitude_wgs84, longitude_wgs84, identification_verification_status)
 
+# hypnum cupressiforme ----
+moss <- read_csv("data/records-2025-04-26_-_hypnum_cupressiforme_var_cup.csv")
+
+moss1 <- moss %>%
+  clean_names() %>%
+  # filter(scientific_name == "Pleurozium schreberi") %>%
+  select(scientific_name, occurrence_status, start_date, start_date_year,
+         latitude_wgs84, longitude_wgs84, identification_verification_status)
 
 moss1_sf <- st_as_sf(moss1, coords = c("longitude_wgs84", "latitude_wgs84"), crs = 4326)
 
@@ -70,3 +80,21 @@ p <- ggplot(moss_raster_df) +
   theme_minimal()
 
 print(p)
+
+
+# BRYOATT dataset ----
+
+bryoatt <- read_excel("data/Bryoatt_updated_2017/Bryoatt_updated_2017.xls") %>%
+  clean_names()
+bryoatt_n <- bryoatt %>%
+  select(name_new, taxon_name, ml, ord, l,f,r,n,s) %>%
+  filter(n == 2)
+
+fsc_spec <- read_excel("data/fsc_collected_species.xlsx") %>%
+  clean_names() %>%
+  rename(name_new = species)
+
+comb <- semi_join(bryoatt_n, fsc_spec, by = "name_new")
+
+bryoatt_pp <- bryoatt %>%
+  filter(name_new == "Polytrichum piliferum")
