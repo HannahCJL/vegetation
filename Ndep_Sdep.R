@@ -5,7 +5,7 @@
 ## 1.1 - Edits ----
 usr <- "hanlit" # "hanlit", "edcarn"
 files_create <- F
-maps_create <- T
+maps_create <- F
 
 ## 1.2 - Libraries ----
 pacman::p_load(

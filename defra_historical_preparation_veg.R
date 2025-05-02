@@ -66,7 +66,7 @@ if (dep_type_select %in% c("totaln")) {
 # 2 - EMEP Data wrangling ----
 
 ## 2.1 - Files ----
-nc_fls <- list.files(fd, pattern = "0_fullrun\\.nc$")
+nc_fls <- list.files(fd, pattern = "0_fullrun\\.nc$") # years edit ----
 # Checks/look at file
 nc1 <- nc_open(str_c(fd,nc_fls[1]))
 names(nc1$var)

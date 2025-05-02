@@ -9,45 +9,41 @@ pacman::p_load(
 wd <- "C:/Users/hanlit/OneDrive - UKCEH/Documents/R/GitHub/vegetation"
 
 # NBN atlas data ----
-moss <- read_csv("data/records-2025-04-22.csv")
+# moss <- read_csv("data/records-2025-04-22.csv")
+# 
+# moss1 <- moss %>%
+#   clean_names() %>%
+#   filter(scientific_name == "Pleurozium schreberi") %>%
+#   select(scientific_name, occurrence_status, start_date, start_date_year,
+#          latitude_wgs84, longitude_wgs84, identification_verification_status)
 
-moss1 <- moss %>%
-  clean_names() %>%
-  filter(scientific_name == "Pleurozium schreberi") %>%
-  select(scientific_name, occurrence_status, start_date, start_date_year,
-         latitude_wgs84, longitude_wgs84, identification_verification_status)
+# Hypnum cupressiforme ----
+# moss <- read_csv("data/records-2025-04-26_-_hypnum_cupressiforme_var_cup.csv")
+# 
+# moss1 <- moss %>%
+#   clean_names() %>%
+#   select(scientific_name, occurrence_status, start_date, start_date_year,
+#          latitude_wgs84, longitude_wgs84, identification_verification_status) %>%
+#   arrange(start_date_year)
+# 
+# moss1_sf <- st_as_sf(moss1, coords = c("longitude_wgs84", "latitude_wgs84"), crs = 4326)
 
-# hypnum cupressiforme ----
-moss <- read_csv("data/records-2025-04-26_-_hypnum_cupressiforme_var_cup.csv")
+# Map for each year
+# Decadal data?
 
-moss1 <- moss %>%
-  clean_names() %>%
-  # filter(scientific_name == "Pleurozium schreberi") %>%
-  select(scientific_name, occurrence_status, start_date, start_date_year,
-         latitude_wgs84, longitude_wgs84, identification_verification_status)
+p <- ggplot(moss1_sf) +
+  geom_sf(aes(color = occurrence_status)) +
+  facet_wrap(~ start_date_year, nrow = 2) +
+  labs(title = "Occurrences by Year",
+       x = "Longitude",
+       y = "Latitude") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
 
-moss1_sf <- st_as_sf(moss1, coords = c("longitude_wgs84", "latitude_wgs84"), crs = 4326)
-
-# Create a plot for each year
-unique_years <- unique(moss1_sf$start_date_year)
-
-for (year in unique_years) {
-  moss_year <- moss1_sf %>% filter(start_date_year == year)
-  
-  p <- ggplot() +
-    geom_sf(data = moss_year, aes(color = occurrence_status)) +
-    labs(title = paste("Occurrences in", year),
-         x = "Longitude",
-         y = "Latitude") +
-    theme_minimal()
-  
-  print(p)
-}
-
-p
+print(p)
 
 # ggsave(str_c(
-#   wd, "/output/veg_pleuroz", ".png"),
+#   wd, "/output/vegetation_map_",moss1$scientific_name[1], ".png"),
 #   p, width = 10, height = 10, dpi = 300, bg = "#FFFFFF")
 
 
@@ -98,3 +94,145 @@ comb <- semi_join(bryoatt_n, fsc_spec, by = "name_new")
 
 bryoatt_pp <- bryoatt %>%
   filter(name_new == "Polytrichum piliferum")
+
+summary(bryoatt$n)
+
+bryoatt_nlove <- bryoatt %>%
+  filter(n %in% c(5,6,7)) %>%
+  arrange(desc(g_bno), desc(n)) %>%
+  slice_head(n = 15) %>%
+  select(name_new, taxon_name, ml, ord, g_bno, l,f,r,n,s) 
+  
+bryoatt_nhate <- bryoatt %>%
+  filter(n %in% c(1,2)) %>%
+  arrange(desc(g_bno)) %>%
+  # slice_head(n = 15) %>%
+  select(name_new, taxon_name, ml, ord, g_bno, l,f,r,n,s) 
+
+
+comb_nlove <- semi_join(bryoatt_nlove, fsc_spec, by = "name_new")
+comb_nhate <- semi_join(bryoatt_nhate, fsc_spec, by = "name_new")
+spec_nlove <- comb_nlove %>% select(name_new)
+spec_nhate <- comb_nhate %>% select(name_new)
+# Save
+# fwrite(spec_nlove, str_c(
+#   "output/", "species_nlove.csv"))
+# fwrite(spec_nhate, str_c(
+#   "output/", "species_nhate.csv"))
+
+comb_nlove_simple <- comb_nlove %>%
+  select(name_new, taxon_name, ml, ord, l,f,r,n,s)
+# remove atrichum undulatum for similar number of records
+
+
+# g_bno for counts across great britain
+
+
+
+# line plots ----
+
+wd <- "C:/Users/hanlit/OneDrive - UKCEH/Documents/R/GitHub/vegetation"
+
+# annual count of observations data 
+annual <- read_csv(str_c("data/annual_obs_count.csv")) %>%
+  rename(annual_count = count)
+
+# file_name <- "records-2025-04-30_n_tol_5_yearly"
+# file_name <- "records-2025-04-30_n_hating_-5_yearly"
+
+# file_name <- "records-2025-04-27_N_hating_species_incl_2019"
+file_name <- "records-2025-04-27_N_loving_species_incl_2019"
+
+nsensitive = F
+
+moss <- read_csv(str_c("data/", file_name, ".csv")) 
+
+moss1 <- moss %>%
+  clean_names() %>%
+  select(scientific_name, occurrence_status, start_date, start_date_year,
+         latitude_wgs84, longitude_wgs84, identification_verification_status) %>%
+  arrange(start_date_year) %>%
+  filter(!is.na(latitude_wgs84) #,
+         # scientific_name %notin% c(
+         # "Kindbergia praelonga", "Plagiomnium undulatum","Tortula muralis",
+         # "Atrichum undulatum","Barbula convoluta","Fissidens taxifolius")
+         # scientific_name != "Atrichum undulatum"
+  ) %>%
+  filter(start_date_year != 2020) %>%
+  mutate(start_date_year = ifelse(start_date_year == 2019, 2020, start_date_year)) %>%
+  left_join(., annual, by = c("start_date_year"="year")) 
+
+moss1_sf <- st_as_sf(moss1, coords = c("longitude_wgs84", "latitude_wgs84"), crs = 4326)
+moss1_sf <- st_transform(moss1_sf, crs = 27700)
+
+years <- c(1960,1970,1980,1990,2000,2010,2020)
+# years <- c(1960,1965,1970,1975,1980,1985,1990,1995,2000,2005,2010,2015,2020)
+
+lapply(X = years, FUN = function(yr){
+  moss_sf <- moss1_sf %>%
+    filter(start_date_year == yr)
+  
+  ndep <- mergedrast %>%
+    subset(str_c("yr",yr))
+  
+  extracted <- terra::extract(ndep, moss_sf) 
+  names(extracted) <- c("id","value")
+  extracted <- extracted %>%
+    filter(!is.na(value))
+  
+  return(data.frame(year = yr, nsens = nsensitive, count = nrow(extracted), mean = mean(extracted$value),
+                    median = median(extracted$value)))
+}) %>% do.call(rbind, .)
+
+# species and year
+
+# n sensitive ----
+sp_yr_n <- lapply(X = unique(moss1_sf$scientific_name), FUN = function(spname) {
+  
+lapply(X = years, FUN = function(yr){
+  moss_sf <- moss1_sf %>%
+    filter(start_date_year == yr,
+           scientific_name == spname)
+  
+  ndep <- mergedrast %>%
+    subset(str_c("yr",yr))
+  
+  extracted <- terra::extract(ndep, moss_sf) 
+  names(extracted) <- c("id","value")
+  extracted <- extracted %>%
+    filter(!is.na(value))
+  
+  return(data.frame(year = yr, nsens = nsensitive, scientific_name = spname, 
+                    count = nrow(extracted), mean = mean(extracted$value),
+                    median = median(extracted$value)))
+}) %>% do.call(rbind, .)
+}) %>% do.call(rbind, .)
+
+
+sp_plot <- issp_yr_n %>%
+  # filter(scientific_name == "Pleurozium schreberi") %>%
+  ggplot() +
+  # geom_point(aes(x = mean, y = count, colour = `scientific_name`), size=3)+
+  # geom_text(aes(x = mean, y = count, label = year), vjust = -0.5, size = 3,
+  #           colour = "grey") + 
+  geom_point(aes(x = mean, y = percentage, colour = `scientific_name`), size=3)+
+  geom_text(aes(x = mean, y = percentage, label = year), vjust = -0.5, size = 3,
+            colour = "grey") + 
+  facet_wrap(~ scientific_name, scales = "free_y") +
+  labs(title = "",
+       x = "Mean nitrogen deposition",
+       y = "Count of recorded species") +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom"
+  )
+
+sp_plot
+
+# Save 
+
+ggsave(str_c(
+  wd, "/output/dotplot_spec_ntol_pct", ".png"),
+  sp_plot, width = 8, height = 7, dpi = 300, bg = "#FFFFFF")
+
+

@@ -27,7 +27,7 @@ maps_comp_hist <- function(raster_select) {
   
   # brks <- c(-20,-10,-5,-1,-0.5,0.5,1,5,10,20)
   
-  # brks <- c(0,5,10,20,30,50)
+  # brks <- c(0,5,10,20,30,50) # breaks edit ----
   brks <- c(0,5,10,15,20,40)
   
   
@@ -53,13 +53,16 @@ maps_comp_hist <- function(raster_select) {
   r_cla <- classify(r_prj, rcl = rcl, include.lowest = T) %>% 
     terra::as.factor()
   
+  names(r_cla) = str_replace_all(names(r_cla), "yr", "")
+
   ## Plot maps
   p <- ggplot()
   # Spatial raster
   p <- p + geom_spatraster(data = r_cla)
   # Plot with plots side by side
-  p <- p + facet_wrap(~lyr, nrow = 2,
-                      labeller = label_wrap_gen(width = 15,multi_line = T))
+  p <- p + facet_wrap(~lyr, nrow = 2, 
+                      labeller = label_wrap_gen(width = 15,multi_line = T)
+                      )
   # Use own colours and fit to bins/breaks
   if (unit != "") {
     p <- p + scale_fill_manual(
@@ -150,3 +153,95 @@ forest_fraction_scen <- function(nc_fl, ndep_type){
   
   r_emep_21
 }
+
+
+`%notin%` <- function(x, y) {
+  !(x %in% y)
+}
+
+
+veg_map <- function(file_name) { 
+  moss <- read_csv(str_c("data/", file_name, ".csv")) 
+  
+  moss1 <- moss %>%
+    clean_names() %>%
+    select(scientific_name, occurrence_status, start_date, start_date_year,
+           latitude_wgs84, longitude_wgs84, identification_verification_status) %>%
+    arrange(start_date_year) %>%
+    filter(!is.na(latitude_wgs84) #,
+           # scientific_name %notin% c(
+           # "Kindbergia praelonga", "Plagiomnium undulatum","Tortula muralis",
+           # "Atrichum undulatum","Barbula convoluta","Fissidens taxifolius")
+           # scientific_name != "Atrichum undulatum"
+           ) %>%
+    filter(start_date_year != 2020)
+  
+  moss1_sf <- st_as_sf(moss1, coords = c("longitude_wgs84", "latitude_wgs84"), crs = 4326)
+  
+  
+  # Check CRS of both data frames
+  st_crs(sf_uk)
+  st_crs(moss1_sf)
+  
+  # Transform moss1_sf to match the CRS of sf_uk
+  # moss1_sf_transformed <- st_transform(moss1_sf, st_crs(sf_uk))
+  moss1_sf_transformed <-moss1_sf
+  sf_uk_tf <- st_transform(sf_uk, st_crs(moss1_sf))
+  # Map for each year
+  # Decadal data?
+  
+  p <- ggplot() +
+    geom_sf(data = sf_uk_tf[sf_uk_tf$COUNTRY != "Isle of Man",],
+            colour = "black", fill = NA, size = 0.2) +
+    geom_sf(data = moss1_sf_transformed, aes(color = occurrence_status),
+            # colour = "#0db2a6",
+            colour = "#e72c07",
+            size = 0.5
+            ) +
+    facet_wrap(~ start_date_year, nrow = 2) +
+    labs(
+         x = "Longitude",
+         y = "Latitude") +
+    # theme_minimal() +
+    theme(legend.position = "bottom")
+  p <- p + ggpl_thme(fnt_sze = 14, axes_lne = F,axes_txt = F)
+  
+  
+  print(p)
+  
+  ggsave(str_c(
+    wd, "/output/vegetation_map_",
+    "N_sens_collectedsp",
+    # moss1$scientific_name[1], 
+    "_Vt.png"),
+    p, width = 10, height = 10, dpi = 300, bg = "#FFFFFF")
+  
+}
+
+# file_name <- "records-2025-04-27_N_hating_species_incl_2019"
+# file_name <- "records-2025-04-27_N_loving_species_incl_2019"
+# 
+# veg_map("records-2025-04-27_N_hating_species_incl_2019")
+# 
+# table(moss1$scientific_name)
+# summary(moss1)
+# 
+# file_name <- "records-2025-04-28_n_sensitive_copilot"
+# # file_name <- "records-2025-04-28_n_tolerant_copilot"
+# # file_name <- "records-2025-04-28_n_tol_copilot_2"
+# file_name <- "records-2025-04-28_n_tol_3"
+# summary(moss1)
+# # 16695  # tol
+# # 21462  # sens
+# 
+# 
+# species_count_by_year <- moss1 %>%
+#   group_by(start_date_year, scientific_name) %>%
+#   summarise(count = n()) %>%
+#   arrange(start_date_year, scientific_name)
+# count_by_year <- moss1 %>%
+#   group_by(start_date_year) %>%
+#   summarise(count = n())
+# 
+# file_name <- "records-2025-04-28_n_tol_v5" #
+# file_name <- "records-2025-04-28_n_sens_v5" #23659
