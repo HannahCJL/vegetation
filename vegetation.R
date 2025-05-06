@@ -127,6 +127,18 @@ comb_nlove_simple <- comb_nlove %>%
 
 # g_bno for counts across great britain
 
+# Vegetation maps ----
+wd <- "C:/Users/hanlit/OneDrive - UKCEH/Documents/R/GitHub/vegetation"
+
+nsensitive <- T
+file_name <- "records-2025-04-27_N_hating_species_incl_2019"
+# file_name <- "records-2025-04-27_N_loving_species_incl_2019"
+
+if(nsensitive == T) {
+  nsens = "nsens"
+} else { 
+  nsens = "ntol"
+}
 
 
 # Dot plots ----
@@ -136,7 +148,15 @@ wd <- "C:/Users/hanlit/OneDrive - UKCEH/Documents/R/GitHub/vegetation"
 
 # file_name <- "records-2025-04-27_N_hating_species_incl_2019"
 file_name <- "records-2025-04-27_N_loving_species_incl_2019"
-nsensitive = T
+nsensitive = F
+
+if(nsensitive == T) {
+  nsens = "nsens"
+  spec <- c("Ptilidium ciliare","Rhytidiadelphus loreus", "Polytrichum piliferum")
+} else { 
+  nsens = "ntol"
+  spec <- c("Atrichum undulatum","Lophocolea heterophylla","Eurhynchium striatum")  
+}
 
 # annual count of observations data 
 annual <- read_csv(str_c("data/annual_obs_count.csv")) %>%
@@ -275,15 +295,64 @@ sp_plot <- issp_yr_n %>%
 sp_plot
 
 # Save 
-
 ggsave(str_c(
-  wd, "/output/dotplot_spec_nsens_pct", ".png"),
+  wd, "/output/dotplot_spec_pct_",nsens, ".png"),
   sp_plot, width = 8, height = 7, dpi = 300, bg = "#FFFFFF")
 
 
-# Species ----
+# Species 
 sort(unique(moss1$scientific_name))
 # nsens - both ellenberg 2
-"Ptilidium ciliare"          "Rhytidiadelphus loreus"  
+# spec <- c("Ptilidium ciliare","Rhytidiadelphus loreus")  
 # ntol -all 5
-"Atrichum undulatum"  "Lophocolea heterophylla"  "Eurhynchium striatum"   
+# spec <- c("Atrichum undulatum","Lophocolea heterophylla","Eurhynchium striatum")  
+
+# Line plots ----
+
+
+# Calculate R-squared values for each scientific_name
+
+# Calculate R-squared values for each scientific_name
+r_squared_values <- issp_yr_n %>%
+  group_by(scientific_name) %>%
+  summarize(r_squared = summary(lm(percentage ~ mean))$r.squared) %>%
+  arrange(desc(r_squared))
+               
+# Print R-squared values
+print(r_squared_values)
+
+# spec <- c("Ptilidium ciliare","Rhytidiadelphus loreus",
+#           "Lepidozia reptans")
+
+turquoise_palette <- c("#21f9bd", "#24b28a", "#146b53")
+turquoise_palette <- c("#79fa9e","#22c551","#057e28" )
+
+# Line of best fit
+line_plot <- issp_yr_n %>%
+  filter(scientific_name %in% spec) %>%
+  ggplot(aes(x = mean, y = percentage, color = scientific_name)) +
+  # geom_point(aes(shape = factor(year))) +
+  geom_point(aes(x = mean, y = percentage)) +
+  geom_smooth(method = "lm", se = FALSE, linewidth = 2) +
+  scale_color_manual(values = turquoise_palette) +
+  labs(
+       x = "Mean Nitrogen deposition",
+       y = "Percentage",
+       color = "Species",
+       # shape = "Year"
+       ) +
+  theme_minimal() +
+  theme(
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12),
+    legend.title = element_text(size = 14), 
+    legend.text = element_text(size = 12),
+    plot.title = element_text(size = 16)
+  )
+
+line_plot
+
+# Save 
+ggsave(str_c(
+  wd, "/output/lineplot_spec_all_pct_", nsens, ".png"),
+  line_plot, width = 7.5, height = 5, dpi = 300, bg = "#FFFFFF")
