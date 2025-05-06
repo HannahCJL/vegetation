@@ -60,7 +60,7 @@ maps_comp_hist <- function(raster_select) {
   # Spatial raster
   p <- p + geom_spatraster(data = r_cla)
   # Plot with plots side by side
-  p <- p + facet_wrap(~lyr, nrow = 2, 
+  p <- p + facet_wrap(~lyr, nrow = 1, 
                       labeller = label_wrap_gen(width = 15,multi_line = T)
                       )
   # Use own colours and fit to bins/breaks
@@ -80,7 +80,8 @@ maps_comp_hist <- function(raster_select) {
   # Add country outline
   p <- p + geom_sf(data = sf_uk[sf_uk$COUNTRY != "Isle of Man",],
                    colour = "black", fill = NA, size = 0.2)
-  p <- p + ggpl_thme(fnt_sze = 14, axes_lne = F,axes_txt = F)
+  p <- p + ggpl_thme(fnt_sze = 14, axes_lne = F,axes_txt = F) +
+    theme(legend.position = "none")
   
   p
   
@@ -194,27 +195,28 @@ veg_map <- function(file_name) {
     geom_sf(data = sf_uk_tf[sf_uk_tf$COUNTRY != "Isle of Man",],
             colour = "black", fill = NA, size = 0.2) +
     geom_sf(data = moss1_sf_transformed, aes(color = occurrence_status),
-            # colour = "#0db2a6",
-            colour = "#e72c07",
-            size = 0.5
+            # colour = "#057e28",
+            colour = "#057e5d",
+            size = 0.8
             ) +
-    facet_wrap(~ start_date_year, nrow = 2) +
+    facet_wrap(~ start_date_year, nrow = 1) +
     labs(
          x = "Longitude",
          y = "Latitude") +
     # theme_minimal() +
-    theme(legend.position = "bottom")
+    theme(legend.position = "bottom",
+          strip.text = element_text(size = 14))
   p <- p + ggpl_thme(fnt_sze = 14, axes_lne = F,axes_txt = F)
   
   
-  print(p)
+  # print(p)
   
   ggsave(str_c(
     wd, "/output/vegetation_map_",
-    "N_sens_collectedsp",
+    "collectedsp_", nsens,
     # moss1$scientific_name[1], 
-    "_Vt.png"),
-    p, width = 10, height = 10, dpi = 300, bg = "#FFFFFF")
+    "_landscape_V2.png"),
+    p, width = 17, height = 5, dpi = 300, bg = "#FFFFFF")
   
 }
 
